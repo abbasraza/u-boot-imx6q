@@ -35,18 +35,30 @@ reset:
 	/* Allow the board to save important registers */
 	b	save_boot_params
 save_boot_params_ret:
-	/*
-	 * disable interrupts (FIQ and IRQ), also set the cpu to SVC32 mode,
-	 * except if in HYP mode already
-	 */
-	mrs	r0, cpsr
-	and	r1, r0, #0x1f		@ mask mode bits
-	teq	r1, #0x1a		@ test for HYP mode
-	bicne	r0, r0, #0x1f		@ clear all mode bits
-	orrne	r0, r0, #0x13		@ set SVC mode
-	orr	r0, r0, #0xc0		@ disable FIQ and IRQ
-	msr	cpsr,r0
-
+        /*
+         * disable interrupts (FIQ and IRQ), also set the cpu to SVC32 mode,
+         * except if in HYP mode already
+         */
+        //mrs = move to register from special register 
+        //The Current Program Status Register (CPSR)
+        //CPSR bit 0 to 4 (0x1f) contain processor mode bits
+        //ARM Modes: USR FIQ IRQ Supervisor Monitor Abort Hypervisor Undefine Supervisor
+        // r0 = cpsr;
+        mrs     r0, cpsr
+        // r1 = r0 & 0x1f;
+        and     r1, r0, #0x1f           @ mask mode bits
+        // teq = test equivalance
+        // if ( r1 != 0x1a ) { 0x1a = Hypervisor Mode
+        teq     r1, #0x1a               @ test for HYP mode
+	//r0 = r0 & ~0x1f; clear mode bits bic = bitwise bit clear
+        bicne   r0, r0, #0x1f           @ clear all mode bits
+ 	// r0 |= 0x13  set supervisor mode
+       orrne   r0, r0, #0x13           @ set SVC mode
+	// }
+	// r0 |= 0xc0; disable FIQ and IRQ interrupts
+        orr     r0, r0, #0xc0           @ disable FIQ and IRQ
+        // cpsr = r0;
+	msr     cpsr,r0
 /*
  * Setup vector:
  * (OMAP4 spl TEXT_BASE is not 32 byte aligned.
