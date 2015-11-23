@@ -66,12 +66,39 @@ save_boot_params_ret:
  */
 #if !(defined(CONFIG_OMAP44XX) && defined(CONFIG_SPL_BUILD))
 	/* Set V=0 in CP15 SCTLR register - for VBAR to point to vector */
+	/* The system control coprocessor, CP15, controls and provides status information
+	   for the functions implemented in the processor. The main functions of the system
+	   control coprocessor are:
+	   * overall system control and configuration
+	   * MMU configuration and management
+	   * cache configuration and management
+	   * system performance monitoring
+	   See Chapter 4: System Control (CortexTM-A9 Revision: r2p2 Technical Reference Manual)
+	   SCTLR: System Control Register
+	   MRC p15, 0, <Rt>, c1, c0, 0 ; Read SCTLR into Rt
+	   MCR p15, 0, <Rt>, c1, c0, 0 ; Write Rt to SCTLR
+	*/
+	// r0 = SCTLR register
 	mrc	p15, 0, r0, c1, c0, 0	@ Read CP15 SCTLR Register
+	/* Vectors bit. This bit selects the base address of the exception vectors.
+	   The possible values of this bit are:
+	   0 Low exception vectors, base address 0x00000000.
+	   1 High exception vectors (Hivecs), base address 0xFFFF0000.
+	*/
+	// r0 &= ~(1<<13);
 	bic	r0, #CR_V		@ V = 0
+	// SCTLR = r0;
 	mcr	p15, 0, r0, c1, c0, 0	@ Write CP15 SCTLR Register
-
+	/* VBAR, Vector Base Address Register:
+	   When high exception vectors are not selected, the VBAR holds the
+	   exception base address.
+	   MRC p15, 0, <Rt>, c12, c0, 0 ; Read VBAR into Rt
+	   MCR p15, 0, <Rt>, c12, c0, 0 ; Write Rt to VBAR
+	*/
 	/* Set vector address in CP15 VBAR register */
+	//r0 = label _start
 	ldr	r0, =_start
+	//VBAR = r0
 	mcr	p15, 0, r0, c12, c0, 0	@Set VBAR
 #endif
 
