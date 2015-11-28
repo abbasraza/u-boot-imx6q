@@ -96,7 +96,7 @@ save_boot_params_ret:
 	   MCR p15, 0, <Rt>, c12, c0, 0 ; Write Rt to VBAR
 	*/
 	/* Set vector address in CP15 VBAR register */
-	//r0 = label _start
+	//r0 = address of routine _start
 	ldr	r0, =_start
 	//VBAR = r0
 	mcr	p15, 0, r0, c12, c0, 0	@Set VBAR
@@ -149,29 +149,56 @@ ENDPROC(save_boot_params)
  *
  *************************************************************************/
 ENTRY(cpu_init_cp15)
+
+	//See Chapter 4: System Control (CortexTM-A9 Revision: r2p2 Technical Reference Manual)
 	/*
 	 * Invalidate L1 I/D
 	 */
 	mov	r0, #0			@ set up for MCR
+	// see ARMV7 ref manual
+	// Table B3-50 TLB maintenance operations
+	// Invalidate entire unified TLB
 	mcr	p15, 0, r0, c8, c7, 0	@ invalidate TLBs
+	// Table B3-49 Cache and branch predictor maintenance operations
+	// Instruction cache invalidate all
 	mcr	p15, 0, r0, c7, c5, 0	@ invalidate icache
+	// Branch predictor invalidate all
 	mcr	p15, 0, r0, c7, c5, 6	@ invalidate BP array
+	// Data Synchronization Barrier (DSB)
 	mcr     p15, 0, r0, c7, c10, 4	@ DSB
+	/* Instruction Synchronization Barrier flushes the pipeline in
+	   the processor, so that all instructions following the ISB
+	   are fetched from cache or memory, after the instruction has
+	   been completed. It ensures that the effects of context changing
+	   operations executed before the ISB instruction are visible to the
+	   instructions fetched after the ISB.
+	*/
 	mcr     p15, 0, r0, c7, c5, 4	@ ISB
 
 	/*
 	 * disable MMU stuff and caches
 	 */
+	// r0 = SCTLR Register
 	mrc	p15, 0, r0, c1, c0, 0
+	// r0 |= ~0x2007;
+	// Vector table at low
 	bic	r0, r0, #0x00002000	@ clear bits 13 (--V-)
+	//Disable MMU
+	// Disable alignment fault checking
+	// Disable caches
 	bic	r0, r0, #0x00000007	@ clear bits 2:0 (-CAM)
+	// r0 |= 0x802;
+	// enable alignment fault checking
 	orr	r0, r0, #0x00000002	@ set bit 1 (--A-) Align
+	//  Program flow prediction enable
 	orr	r0, r0, #0x00000800	@ set bit 11 (Z---) BTB
 #ifdef CONFIG_SYS_ICACHE_OFF
 	bic	r0, r0, #0x00001000	@ clear bit 12 (I) I-cache
 #else
+	//r0 |= 0x1000; Enable Instruction Cache
 	orr	r0, r0, #0x00001000	@ set bit 12 (I) I-cache
 #endif
+	// SCTLR = r0;
 	mcr	p15, 0, r0, c1, c0, 0
 
 #ifdef CONFIG_ARM_ERRATA_716044

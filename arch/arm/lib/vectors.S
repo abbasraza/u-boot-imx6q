@@ -50,7 +50,7 @@ _start:
 #ifdef CONFIG_SYS_DV_NOR_BOOT_CFG
 	.word	CONFIG_SYS_DV_NOR_BOOT_CFG
 #endif
-	// see ARM reference manual (Vector Table)
+	// see ARM reference manual Table B1-3 The vector tables
 	b	reset
 	ldr	pc, _undefined_instruction
 	ldr	pc, _software_interrupt
