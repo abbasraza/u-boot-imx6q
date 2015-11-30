@@ -201,6 +201,9 @@ ENTRY(cpu_init_cp15)
 	// SCTLR = r0;
 	mcr	p15, 0, r0, c1, c0, 0
 
+	// Erratas defined in ./include/configs/mx6_common.h for imx6
+	// Read ARM® CortexTM-A9 processors r2 releases Software Developers Errata Notice
+
 #ifdef CONFIG_ARM_ERRATA_716044
 	mrc	p15, 0, r0, c1, c0, 0	@ read system control register
 	orr	r0, r0, #1 << 11	@ set bit #11
@@ -208,23 +211,78 @@ ENTRY(cpu_init_cp15)
 #endif
 
 #if (defined(CONFIG_ARM_ERRATA_742230) || defined(CONFIG_ARM_ERRATA_794072))
+	/* Errata: (794072) A short loop including a DMB instruction might cause a denial
+	   of service on another processor which executes a CP15 broadcast operation
+	   Workaround:
+	   This erratum can be worked round by setting bit[4] of the undocumented Diagnostic
+	   Control Register to 1. This register is encoded as CP15 c15 0 c0 1.
+	   This bit can be written in Secure state only, with the following Read/Modify/Write code sequence:
+	   MRC p15,0,rt,c15,c0,1
+	   ORR rt,rt,#0x10
+	   MCR p15,0,rt,c15,c0,1
+	   When it is set, this bit causes the DMB instruction to be decoded and executed like a DSB.
+	   Using this software workaround is not expected to have any impact on the overall performance
+	   of the processor on a typical code base.
+	 */
 	mrc	p15, 0, r0, c15, c0, 1	@ read diagnostic register
 	orr	r0, r0, #1 << 4		@ set bit #4
 	mcr	p15, 0, r0, c15, c0, 1	@ write diagnostic register
 #endif
 
 #ifdef CONFIG_ARM_ERRATA_743622
+	/* Read ARM® CortexTM-A9 processors r2 releases Software Developers Errata Notice
+	   Errata: 2.4.1 (743622) Faulty logic in the Store Buffer might cause data corruption
+	   Workaround
+	   A software workaround is to set bit[6] in the undocumented Diagnostic Control register
+	   placed in CP15 c15 0 c0 1.
+	   You can write this bit in Secure state only, by using the following Read/Modify/Writ
+	   code sequence:
+	   MRC p15,0,rt,c15,c0,1 ORR rt,rt,#0x40
+	   MCR p15,0,rt,c15,c0,1
+	   The 'fast lookup' optimization in the Store Buffer is disabled when this bit is set.
+	   This prevents the erratum occurring.
+	   Setting this bit has no visible impact on the overall performance or power consumption
+	   of the processor.
+	*/
+
 	mrc	p15, 0, r0, c15, c0, 1	@ read diagnostic register
 	orr	r0, r0, #1 << 6		@ set bit #6
 	mcr	p15, 0, r0, c15, c0, 1	@ write diagnostic register
 #endif
 
 #ifdef CONFIG_ARM_ERRATA_751472
+	/* Errata: (751472) An interrupted ICIALLUIS operation might prevent the completion
+	   of a following broadcast operation
+	   Workaround
+	   A software workaround for this erratum is to set bit[11] in the undocumented
+	   Diagnostic Control register placed in CP15 c15 0 c0 1.
+	   You can write this bit in Secure state only, by using the following Read/Modify/Write code sequence:
+	   MRC p15,0,rt,c15,c0,1
+	   ORR rt,rt,#0x800
+	   MCR p15,0,rt,c15,c0,1
+	   When it is set, this bit prevents the interruption of CP15 maintenance operations.
+	   There is unlikely to be any visible impact on system performance when using this software workaround.
+	 */
+
 	mrc	p15, 0, r0, c15, c0, 1	@ read diagnostic register
 	orr	r0, r0, #1 << 11	@ set bit #11
 	mcr	p15, 0, r0, c15, c0, 1	@ write diagnostic register
 #endif
 #ifdef CONFIG_ARM_ERRATA_761320
+	/*
+	   Errata: (761320) Full cache line writes to the same memory region from at least two
+	   processors might deadlock the processor.
+	   Workaround
+	   This erratum can be worked round by setting bit[21] of the undocumented Diagnostic
+	   Control Register to 1. This register is encoded as CP15 c15 0 c0 1.
+	   The bit can be written in Secure state only, with the following Read/Modify/Write code sequence:
+	   MRC p15,0,rt,c15,c0,1
+	   ORR rt,rt,#0x200000 MCR p15,0,rt,c15,c0,1
+	   When this bit is set, the "direct eviction" optimization in the Bus Interface Unit is disabled,
+	   which means this erratum cannot occur.
+	   Setting this bit might prevent the Cortex-A9 from utilizing the full bandwidth when performing
+	   intensive full cache line writes, and therefore a slight performance drop might be visible.
+	 */
 	mrc	p15, 0, r0, c15, c0, 1	@ read diagnostic register
 	orr	r0, r0, #1 << 21	@ set bit #21
 	mcr	p15, 0, r0, c15, c0, 1	@ write diagnostic register
