@@ -80,23 +80,28 @@ save_boot_params_ret:
 	*/
 	// r0 = SCTLR register
 	mrc	p15, 0, r0, c1, c0, 0	@ Read CP15 SCTLR Register
-	/* Vectors bit. This bit selects the base address of the exception vectors.
+	/* Vectors bit is bit # 13 of the SCTRL register. 
+	   This bit selects the base address of the exception vectors.
 	   The possible values of this bit are:
 	   0 Low exception vectors, base address 0x00000000.
 	   1 High exception vectors (Hivecs), base address 0xFFFF0000.
 	*/
 	// r0 &= ~(1<<13);
+    // So here we are setting the normal (low) exception vectors.
 	bic	r0, #CR_V		@ V = 0
 	// SCTLR = r0;
 	mcr	p15, 0, r0, c1, c0, 0	@ Write CP15 SCTLR Register
 	/* VBAR, Vector Base Address Register:
+       "See ARM Architecture Reference Manual
+	   ARMv7-A and ARMv7-R edition"
+	   also section 'Exception vectors and the exception base address'
 	   When high exception vectors are not selected, the VBAR holds the
 	   exception base address.
 	   MRC p15, 0, <Rt>, c12, c0, 0 ; Read VBAR into Rt
 	   MCR p15, 0, <Rt>, c12, c0, 0 ; Write Rt to VBAR
 	*/
 	/* Set vector address in CP15 VBAR register */
-	//r0 = address of routine _start
+	//r0 = address of routine _start (See arch/arm/lib/vectors.S)
 	ldr	r0, =_start
 	//VBAR = r0
 	mcr	p15, 0, r0, c12, c0, 0	@Set VBAR
